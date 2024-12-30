@@ -1,6 +1,13 @@
 using GIV
 using Test
 
-@testset "GIV.jl" begin
-    # Write your tests here.
+tests = [
+    "test_formula.jl",
+    "test_interface.jl",
+    "test_estimates.jl"
+    # "test_vcov_algorithm.jl",
+    # "test_with_simulation.jl"
+]
+for test in tests
+    include("$test")
 end
