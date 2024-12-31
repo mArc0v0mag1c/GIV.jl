@@ -8,7 +8,7 @@ function estimate_giv(
     guess = nothing,
     quiet = false,
     solver_options = (;),
-) where {A<:Union{Val{:uu},Val{:up}}}
+) where {A<:Union{Val{:iv},Val{:debiased_ols}}}
     N, T, Nmom = size(Cts)
     Cp = reshape(Cpts, N * T, Nmom)
     if isnothing(guess)
@@ -34,7 +34,7 @@ function estimate_giv(
     return ζ̂, converged
 end
 
-function moment_conditions(ζ, qmat, Cpts, Cts, Smat, exclmat, ::Val{:uu})
+function moment_conditions(ζ, qmat, Cpts, Cts, Smat, exclmat, ::Val{:iv})
     Nmom = length(ζ)
     N, T = size(qmat)
     u = vec(qmat) + reshape(Cpts, N * T, Nmom) * ζ
@@ -77,7 +77,7 @@ function moment_conditions(ζ, qmat, Cpts, Cts, Smat, exclmat, ::Val{:uu})
     return err
 end
 
-function moment_conditions(ζ, qmat, Cpts, Cts, Smat, exclmat, ::Val{:up})
+function moment_conditions(ζ, qmat, Cpts, Cts, Smat, exclmat, ::Val{:debiased_ols})
     Nmom = length(ζ)
     N, T = size(qmat)
     u = vec(qmat) + reshape(Cpts, N * T, Nmom) * ζ

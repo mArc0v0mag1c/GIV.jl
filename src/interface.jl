@@ -41,11 +41,11 @@ Estimate the GIV model. It returns a `GIVModel` object containing the estimated 
     (a vector in the case of categorical variables and a number otherwise). In the example above, the initial guess can be provided as
     ```julia
     guess = Dict(:id => [1.0, 2.0], :η => 0.5)
-- `algorithm::Symbol = :uu`: The algorithm to use for estimation. The default is `:uu`. The options are
-    - `:uu`: The most flexible algorithm. It uses the moment condition such that E[u_i u_{S,-i}] = 0
-    - `:vcov`: `:vcov` uses the same set of moment conditions as `:uu` but precomputes the covariance matrices 
+- `algorithm::Symbol = :iv`: The algorithm to use for estimation. The default is `:iv`. The options are
+    - `:iv`: The most flexible algorithm. It uses the moment condition such that E[u_i u_{S,-i}] = 0
+    - `:iv_vcov`: `:iv_vcov` uses the same set of moment conditions as `:iv` but precomputes the covariance matrices 
     once and use them during the iteration. Constant weighting across time is required. 
-    - `:up`: `:up` uses the moment condition such that E[u_i C_it p_it] = 1/ζ_St σ_i^2. ]
+    - `:debiased_ols`: `:debiased_ols` uses the moment condition such that E[u_i C_it p_it] = 1/ζ_St σ_i^2. ]
     It requires the adding-up constraint is satisifed so that Σ_i (q_it weight_i) = 0. 
     If not, the aggregate elasticity will be underestimated.
     - `:scalar_search`: `:scalar_search` uses the same moment condition `up` but requires the aggregate elasticity be constant across time. 
@@ -78,7 +78,7 @@ function giv(
     weight::Union{Symbol,Nothing} = nothing;
     guess = nothing,
     exclude_pairs = Pair[],
-    algorithm = :uu,
+    algorithm=:iv,
     solver_options = (;),
     quiet = false,
     savedf = true,
@@ -88,7 +88,7 @@ function giv(
     df = preprocess_dataframe(df, formula, id, t, weight; quiet = quiet)
     slope_coefnames, factor_coefnames, endog_name, response_name = get_coefnames(df, formula)
 
-    if length(exclude_pairs) > 0 && solver_options in [:up, :scalar_search]
+    if length(exclude_pairs) > 0 && solver_options in [:debiased_ols, :scalar_search]
         @error("Moment exclusion not supported for the selected algorithm. 
         Proceed without `exclude_pairs`")
     end
@@ -238,7 +238,7 @@ function generate_matrices(
     id,
     t,
     weight;
-    algorithm = :uu,
+    algorithm=:iv,
     quiet = false,
     exclude_pairs = Pair[],
 )
@@ -284,7 +284,7 @@ function generate_matrices(
     Smat = reshape(S, N, T)
 
     if !quiet &&
-       algorithm ∈ [:scalar_search, :up] &&
+       algorithm ∈ [:scalar_search, :debiased_ols] &&
        any(>(eps(eltype(qmat))), sum(qmat .* Smat; dims = 1) .^ 2)
         @warn ("Adding-up constraints not satisfied. `up` and `scalar_search` algorithms may be biased.")
     end

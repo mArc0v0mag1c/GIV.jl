@@ -46,7 +46,7 @@ err_ig = GIV.compute_err_ig(ζ, Cqq, CqCp, CCpq, CCpCp, zeros(Bool, N, N))
 (@einsum err_ig2[i,g,j] := u[i,t] * u[j,t] * Cts[i,t,g]) ./= T-1
 @test norm(err_ig2 - Array(err_ig)) < 1e-12
 
-ζ, converged = estimate_giv(qmat, Cpts, Cts, Smat, zeros(Bool, N, N), Val{:uu}(); guess = ones(7))
+ζ, converged = estimate_giv(qmat, Cpts, Cts, Smat, zeros(Bool, N, N), Val{:iv}(); guess=ones(7))
 @assert converged
 @test norm(GIV.mean_vcov_err(
     ζ,
@@ -93,8 +93,8 @@ err_ig = GIV.compute_err_ig(ζ, Cqq, CqCp, CCpq, CCpCp, zeros(Bool, N, N))
 # @test givmodel.factor_coef ≈ vec(factor_coef) atol = 1e-4
 
 # # algorithm uu
-# @time givmodel_uu = giv(df, @formula(q + endog(p) ~ id & (η1 + η2)), :id, :t, :absS; guess = Dict("Constant" => 1.0), algorithm = :uu, dual_coef = true)
+# @time givmodel_uu = giv(df, @formula(q + endog(p) ~ id & (η1 + η2)), :id, :t, :absS; guess = Dict("Constant" => 1.0), algorithm = :iv, dual_coef = true)
 # @test givmodel_uu.coef ≈ givmodel.coef atol = 1e-6
 
 # # algorithm vcov
-# @time givmodel_uu = giv(df, @formula(q + endog(p) ~ id & (η1 + η2)), :id, :t, :absS; guess = Dict("Constant" => 1.0), algorithm = :vcov, dual_coef = true)
+# @time givmodel_uu = giv(df, @formula(q + endog(p) ~ id & (η1 + η2)), :id, :t, :absS; guess = Dict("Constant" => 1.0), algorithm = :iv_vcov, dual_coef = true)

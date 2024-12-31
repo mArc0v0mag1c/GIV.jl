@@ -38,7 +38,7 @@ givmodel_uu = giv(
     :t,
     :absS;
     guess = Dict("Constant" => 1.0),
-    algorithm = :uu,
+    algorithm=:iv,
     savedf = true,
 )
 @test givmodel_uu.coef ≈ givmodel.coef atol = 1e-6
@@ -51,7 +51,7 @@ givmodel_vcov = giv(
     :t,
     :absS;
     guess = Dict("Constant" => 1.0),
-    algorithm = :vcov,
+    algorithm=:iv_vcov,
 )
 @test givmodel_vcov.coef ≈ givmodel.coef atol = 1e-6
 
@@ -63,7 +63,7 @@ givmodel_up = giv(
     :t,
     :absS;
     guess = Dict("Constant" => 1.0),
-    algorithm = :up,
+    algorithm=:debiased_ols,
 )
 @test givmodel_up.coef ≈ givmodel.coef atol = 1e-6
 
@@ -96,7 +96,7 @@ givmodel_uu = giv(
     :t,
     :absS;
     guess = Dict("id" => ones(5)),
-    algorithm = :uu,
+    algorithm=:iv,
 )
 @test givmodel_uu.coef ≈ givmodel.coef atol = 1e-6
 
@@ -107,7 +107,7 @@ givmodel_up = giv(
     :t,
     :absS;
     guess = Dict("id" => ones(5)),
-    algorithm = :up,
+    algorithm=:debiased_ols,
 )
 @test givmodel_up.coef ≈ givmodel.coef atol = 1e-6
 
@@ -134,7 +134,7 @@ givmodel_up = giv(
     :t,
     :absS;
     guess = Dict("id" => ones(4)),
-    algorithm = :up,
+    algorithm=:debiased_ols,
 )
 @test givmodel_up.coef ≈ givmodel.coef atol = 1e-6
 
@@ -145,6 +145,6 @@ givmodel_uu = giv(
     :t,
     :absS;
     guess = Dict("id" => ones(4)),
-    algorithm = :uu,
+    algorithm=:iv,
 )
 @test givmodel_uu.coef ≈ [1.0442, 0.9967, 4.2707, 0.7597] atol = 1e-4

@@ -17,7 +17,7 @@ df = preprocess_dataframe(df, f, :id, :t, :absS; quiet = true)
     :t,
     :absS;
     guess = Dict("group" => ones(10)),
-    algorithm = :uu,
+    algorithm=:iv,
 )
 
 @time givmodel_uu = giv(
@@ -27,10 +27,10 @@ df = preprocess_dataframe(df, f, :id, :t, :absS; quiet = true)
     :t,
     :absS;
     guess = Dict("group" => ones(10)),
-    algorithm = :vcov,
+    algorithm=:iv_vcov,
 )
 
-# qmat, pmat, Cts, ηts, Smat, uqmat, λq, uCpts, λCp, meanqmat, meanpmat, meanCpts, meanηts = GIV.generate_matrices(df, f, id, t, weight; algorithm = :uu, quiet = false)
+# qmat, pmat, Cts, ηts, Smat, uqmat, λq, uCpts, λCp, meanqmat, meanpmat, meanCpts, meanηts = GIV.generate_matrices(df, f, id, t, weight; algorithm = :iv, quiet = false)
 
 # @time Cqq, CqCp, CCpq, CCpCp, qq, Cpq, CpCp = GIV.compuate_covariance_tensors(uqmat, uCpts, Cts)
 

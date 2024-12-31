@@ -62,9 +62,9 @@ export coef,
     kp = (; quiet=true, savedf=true)
     @compile_workload begin
         giv(df, f, :id, :t, :S; algorithm=:scalar_search, guess=Dict("Aggregate" => 1.0), kp...)
-        giv(df, f, :id, :t, :S; algorithm=:up, kp...)
-        giv(df, f, :id, :t, :S; algorithm=:uu, kp...)
-        m = giv(df, f, :id, :t, :S; algorithm=:vcov, kp...)
+        giv(df, f, :id, :t, :S; algorithm=:debiased_ols, kp...)
+        giv(df, f, :id, :t, :S; algorithm=:iv, kp...)
+        m = giv(df, f, :id, :t, :S; algorithm=:iv_vcov, kp...)
         predict_endog(m; quiet=true)
     end
 end

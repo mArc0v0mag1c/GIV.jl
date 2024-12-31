@@ -202,7 +202,7 @@ function monte_carlo_with_interaction(Nsims; seed = nothing, kwargs...)
 end
 
 simparams = (;T = 100, N = 5, varᵤshare = 1, usupplyshare = 0.0, h = 0.2, σᵤcurv = 0.1, ζs = 0.0, NC = 0, M = 0.5)
-estparams = (; algorithm = :uu, quiet = true)
+estparams = (; algorithm=:iv, quiet=true)
 
 bias, covered = monte_carlo_with_interaction(400; seed = 1,
     Δζ = -1,

@@ -56,7 +56,7 @@ function estimate_giv(
     Cts,
     Smat,
     exclmat,
-    ::Val{:vcov};
+    ::Val{:iv_vcov};
     guess = nothing,
     quiet = false,
     solver_options = (;),
