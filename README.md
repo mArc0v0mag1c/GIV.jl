@@ -8,3 +8,4 @@
 
 Estimate models using granular instrument variables (GIV).
 
+Very preliminary and under development. Use at your own risk.
