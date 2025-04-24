@@ -42,7 +42,7 @@ function moment_conditions(ζ, qmat, Cpts, Cts, Smat, exclmat, ::Val{:iv})
 
     σu²vec = [var(umat[i, :]; mean = zero(eltype(umat))) for i in 1:N]
     precision = 1 ./ σu²vec
-    precision = precision ./ sum(precision)
+    precision ./= sum(precision)
     err = zeros(eltype(ζ), Nmom, T)
     weightsum = zeros(eltype(ζ), Nmom, T) # equal weight moment conditions for numerical stability
     @threads for (imom, t) in Tuple.(CartesianIndices((Nmom, T)))
