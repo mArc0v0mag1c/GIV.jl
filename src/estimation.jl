@@ -155,75 +155,86 @@ function solve_vcov(ζ, umat, Smat, Cts)
     return σu²vec, Σζ
 end
 
-
 """
 Solve the OLS covariance matrix for the GIV estimation.
 
-Code aggressively optimized by ChatGPT o1 at the sacrifice of readability.
-
-More readable code:
-
-```julia
-function solve_ols_vcov(umat, ηts)
-    N, T, Nmom = size(ηts)
-    σu²vec = [var(umat[i, :]; mean = zero(eltype(umat))) for i in 1:N]
-    ηηvec = [ηts[i, :, :]' * ηts[i, :, :] / T for i in 1:N]
-    bread = inv(sum(ηηvec))
-    meat = sum(ηηvec .* σu²vec)
-    vcov_ols = bread * meat * bread / T
-    return vcov_ols
-end
-```
+Code optimized for performance with dynamic task distribution via @spawn.
 """
 function solve_ols_vcov(umat, ηts)
     N, T, Nmom = size(ηts)
 
-    # Initialize per-thread accumulators to avoid data races
-    nthreads = Threads.nthreads()
-    breads = [zeros(Nmom, Nmom) for _ in 1:nthreads]
-    meats = [zeros(Nmom, Nmom) for _ in 1:nthreads]
+    # Preallocate the final matrices
+    bread = zeros(Nmom, Nmom)
+    meat = zeros(Nmom, Nmom)
 
-    @threads for i in 1:N
-        threadid = Threads.threadid()
-        σu² = var(@view umat[i, :]; mean = zero(eltype(umat)))
+    # Process a chunk of entities
+    function process_chunk(chunk_range)::Tuple{Matrix{Float64},Matrix{Float64}}
+        local_bread = zeros(Nmom, Nmom)
+        local_meat = zeros(Nmom, Nmom)
 
-        # Skip computations if variance is zero
-        if σu² == 0
-            continue
+        for i in chunk_range
+            σu² = var(@view umat[i, :]; mean=zero(eltype(umat)))
+
+            # Skip computations if variance is zero
+            if σu² == 0
+                continue
+            end
+
+            # Use views to avoid copying data
+            @views ηi = ηts[i, :, :]
+
+            # Identify non-zero columns to exploit sparsity
+            zero_cols = vec(all(iszero, ηi; dims=1))
+            nonzero_cols = findall(!x -> x, zero_cols)
+            if isempty(nonzero_cols)
+                continue  # Skip if all columns are zero
+            end
+
+            # Use views to avoid copying ηi_nonzero
+            ηi_nonzero = ηi[:, nonzero_cols]
+
+            # Compute ηηi_sub = ηi_nonzero' * ηi_nonzero / T
+            ηηi_sub = zeros(length(nonzero_cols), length(nonzero_cols))
+            BLAS.syrk!('U', 'T', 1.0 / T, ηi_nonzero, 0.0, ηηi_sub)
+
+            # Wrap ηηi_sub with Symmetric to represent the full symmetric matrix
+            ηηi_sub_sym = Symmetric(ηηi_sub, :U)
+
+            # Map back to original dimensions
+            full_ηηi = zeros(Nmom, Nmom)
+            full_ηηi[nonzero_cols, nonzero_cols] .= ηηi_sub_sym
+
+            # Update local accumulators
+            local_bread .+= full_ηηi
+            local_meat .+= full_ηηi .* σu²
         end
 
-        # Use views to avoid copying data
-        @views ηi = ηts[i, :, :]
-
-        # Identify non-zero columns to exploit sparsity
-        zero_cols = vec(all(iszero, ηi; dims = 1))
-        nonzero_cols = findall(!x -> x, zero_cols)
-        if isempty(nonzero_cols)
-            continue  # Skip if all columns are zero
-        end
-
-        # Use views to avoid copying ηi_nonzero
-        ηi_nonzero = ηi[:, nonzero_cols]
-
-        # Compute ηηi_sub = ηi_nonzero' * ηi_nonzero / T
-        ηηi_sub = zeros(length(nonzero_cols), length(nonzero_cols))
-        BLAS.syrk!('U', 'T', 1.0 / T, ηi_nonzero, 0.0, ηηi_sub)
-
-        # Wrap ηηi_sub with Symmetric to represent the full symmetric matrix
-        ηηi_sub_sym = Symmetric(ηηi_sub, :U)
-
-        # Map back to original dimensions
-        full_ηηi = zeros(Nmom, Nmom)
-        full_ηηi[nonzero_cols, nonzero_cols] .= ηηi_sub_sym
-
-        # Update per-thread accumulators
-        breads[threadid] .+= full_ηηi
-        meats[threadid] .+= full_ηηi .* σu²
+        return local_bread, local_meat
     end
 
-    # Sum over all threads
-    bread = sum(breads)
-    meat = sum(meats)
+    # Create smaller chunks for better load balancing
+    nthreads = Threads.nthreads()
+    # Use more chunks than threads for better load balancing
+    n_chunks = nthreads * 2
+    chunk_size = cld(N, n_chunks)
+
+    # Create and spawn tasks with type annotation
+    tasks = Vector{Task}()
+    for c in 1:n_chunks
+        start_idx = (c - 1) * chunk_size + 1
+        end_idx = min(c * chunk_size, N)
+        if start_idx <= end_idx
+            task = Threads.@spawn process_chunk(start_idx:end_idx)
+            push!(tasks, task)
+        end
+    end
+
+    # Collect results from all tasks
+    for task in tasks
+        thread_bread, thread_meat = fetch(task)::Tuple{Matrix{Float64},Matrix{Float64}}
+        bread .+= thread_bread
+        meat .+= thread_meat
+    end
 
     # Compute the covariance matrix using Symmetric to exploit symmetry
     bread_sym = Symmetric(bread)
