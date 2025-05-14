@@ -1,11 +1,9 @@
 module GIV
-using CategoricalArrays
 using Random
 using Base.Threads
 using DataFrames
 using LinearAlgebra
 using Optim
-using ForwardDiff: Dual, Partials
 using NLsolve
 using Parameters
 using StatsModels
@@ -16,7 +14,6 @@ using Reexport
 using StatsBase
 using StatsFuns
 using Tables
-using Printf
 using PrecompileTools
 @reexport using StatsAPI
 
@@ -26,7 +23,7 @@ include("estimation.jl")
 include("scalar_search.jl")
 include("vcov_algorithm.jl")
 include("utils/formula.jl")
-include("utils/delta_method.jl")
+# include("utils/delta_method.jl")
 
 include("simulation.jl")
 # include("gmm.jl")
