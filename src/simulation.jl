@@ -73,7 +73,7 @@ end
     q::Matrix{T}
 end
 
-function DataFrame(simdata::SimData)
+function DataFrames.DataFrame(simdata::SimData)
     N, T = size(simdata.q)
     df = DataFrame(
         S = vec(simdata.S),
