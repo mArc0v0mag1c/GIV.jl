@@ -9,7 +9,7 @@ from src.python.giv_api import giv, GIVModel
 
 from __future__ import annotations
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, List, Tuple, Union
 import numpy as np
 import pandas as pd
 from juliacall import Main as jl
@@ -26,7 +26,6 @@ def _init_julia() -> None:
     global _julia_ready
     if _julia_ready:
         return
-
     jl.seval("using Pkg")
     jl.seval(f'Pkg.activate("{_PROJECT_DIR.as_posix()}")')
     jl.seval(f'push!(LOAD_PATH, "{_SRC_DIR.as_posix()}")')
@@ -36,7 +35,7 @@ def _init_julia() -> None:
 # ---------------------------------------------------------------------------
 # Helper – convert guess dict
 # ---------------------------------------------------------------------------
-def _py_to_julia_guess(guess: dict):
+def _py_to_julia_guess(guess: dict) -> Any:
     """Convert Python dict ➜ Julia Dict{String,Float64}."""
     return jl.Dict([(str(k), float(v)) for k, v in guess.items()])
 
@@ -46,35 +45,50 @@ def _py_to_julia_guess(guess: dict):
 class GIVModel:
     """Python-native wrapper for Julia GIV results"""
 
-    def __init__(self, jl_model):
+    def __init__(self, jl_model: Any):
         self._jl_model = jl_model
+        self.coef = np.asarray(jl_model.coef)
+        self.vcov = np.asarray(jl_model.vcov)
+        self.factor_coef = np.asarray(jl_model.factor_coef)
+        self.factor_vcov = np.asarray(jl_model.factor_vcov)
+        agg = jl_model.agg_coef
+        try:
+            self.agg_coef = float(agg)
+        except (TypeError, ValueError):
+            self.agg_coef = np.asarray(agg)
+        self.formula = str(jl_model.formula)
+        self.price_factor_coef = np.asarray(jl_model.price_factor_coef)
+        self.residual_variance = np.asarray(jl_model.residual_variance)
+        self.responsename = str(jl_model.responsename)
+        self.endogname = str(jl_model.endogname)
+        self.coefnames = list(jl_model.coefnames)
+        self.factor_coefnames = list(jl_model.factor_coefnames)
+        self.idvar = str(jl_model.idvar)
+        self.tvar = str(jl_model.tvar)
+        wv = jl_model.weightvar
+        self.weightvar = str(wv) if wv is not jl.nothing else None
+        self.exclude_pairs = [(p.first, p.second) for p in jl_model.exclude_pairs]
+        self.converged = bool(jl_model.converged)
+        self.N = int(jl_model.N)
+        self.T = int(jl_model.T)
+        self.nobs = int(jl_model.nobs)
+        self.dof = int(jl_model.dof)
+        self.dof_residual = int(jl_model.dof_residual)
 
-    @property
-    def coef(self) -> np.ndarray:
-        return np.asarray(self._jl_model.coef)
-
-    @property
-    def vcov(self) -> np.ndarray:
-        return np.asarray(self._jl_model.vcov)
-
-    @property
-    def factor_coef(self) -> np.ndarray:
-        return np.asarray(self._jl_model.factor_coef)
-
-    @property
-    def factor_vcov(self) -> np.ndarray:
-        return np.asarray(self._jl_model.factor_vcov)
-
-    @property
-    def agg_coef(self) -> float | np.ndarray:
-        agg = self._jl_model.agg_coef
-        return float(agg) if jl.isa(agg, float) else np.asarray(agg)
-
-    @property
-    def formula(self) -> str:
-        return str(self._jl_model.formula)
+        # Helper to extract Julia DataFrame columns
+        get_col = jl.seval("(df, col) -> df[!, Symbol(col)]")
+        # Convert original DataFrame if available
+        j_df = jl_model.df
+        if j_df is not jl.nothing:
+            j_names = jl.seval("names")(j_df)
+            # Reuse get_col lambda to extract columns
+            df_dict = {str(nm): np.asarray(get_col(j_df, nm)) for nm in j_names}
+            self.df = pd.DataFrame(df_dict)
+        else:
+            self.df = None
 
     def coefficient_table(self) -> pd.DataFrame:
+        """Return the full coefficient table as DataFrame"""
         return coefficient_table(self._jl_model)
 
 # ---------------------------------------------------------------------------
@@ -110,14 +124,11 @@ def giv(
 # ---------------------------------------------------------------------------
 # Coefficient Table Generator
 # ---------------------------------------------------------------------------
-def coefficient_table(jl_model) -> pd.DataFrame:
+def coefficient_table(jl_model: Any) -> pd.DataFrame:
     """Get full statistical summary from Julia model"""
     _init_julia()
 
-    # Get Julia's formatted coefficient table
     ct = jl.seval("GIV.coeftable")(jl_model)
-
-    # Extract components
     cols = jl.seval("""
     function getcols(ct)
         cols = [ct.cols[i] for i in 1:length(ct.cols)]
@@ -125,20 +136,14 @@ def coefficient_table(jl_model) -> pd.DataFrame:
     end
     """)(ct)
 
-    # Build DataFrame
     df = pd.DataFrame(
         np.column_stack(cols.cols),
         columns=list(cols.colnms)
     )
-
-    # Add term names if available
     if cols.rownms:
         df.insert(0, "Term", list(cols.rownms))
-
-    # Convert p-values to float
     if "Pr(>|t|)" in df.columns:
         df["Pr(>|t|)"] = df["Pr(>|t|)"].astype(float)
-
     return df
 
 # ---------------------------------------------------------------------------
@@ -157,7 +162,6 @@ if __name__ == "__main__":
         "w": 1.0
     })
 
-    # Model estimation
     model = giv(
         df_example,
         "q + id & endog(p) ~ 0",
@@ -168,7 +172,6 @@ if __name__ == "__main__":
         guess={"Aggregate": 2.0}
     )
 
-    # Display results
     print("Estimated coefficients:", model.coef)
     print("\nCoefficient table:")
     print(model.coefficient_table().head())
