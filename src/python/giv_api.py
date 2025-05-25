@@ -47,6 +47,7 @@ class GIVModel:
 
     def __init__(self, jl_model: Any):
         self._jl_model = jl_model
+
         self.coef = np.asarray(jl_model.coef)
         self.vcov = np.asarray(jl_model.vcov)
         self.factor_coef = np.asarray(jl_model.factor_coef)
@@ -77,11 +78,15 @@ class GIVModel:
 
         # Helper to extract Julia DataFrame columns
         get_col = jl.seval("(df, col) -> df[!, Symbol(col)]")
-        # Convert original DataFrame if available
+
+        j_coefdf = jl_model.coefdf
+        j_coef_names = jl.seval("names")(j_coefdf)
+        coefdf_dict = {str(nm): np.asarray(get_col(j_coefdf, nm)) for nm in j_coef_names}
+        self.coefdf = pd.DataFrame(coefdf_dict)
+
         j_df = jl_model.df
         if j_df is not jl.nothing:
             j_names = jl.seval("names")(j_df)
-            # Reuse get_col lambda to extract columns
             df_dict = {str(nm): np.asarray(get_col(j_df, nm)) for nm in j_names}
             self.df = pd.DataFrame(df_dict)
         else:
@@ -90,6 +95,7 @@ class GIVModel:
     def coefficient_table(self) -> pd.DataFrame:
         """Return the full coefficient table as DataFrame"""
         return coefficient_table(self._jl_model)
+
 
 # ---------------------------------------------------------------------------
 # Public API
