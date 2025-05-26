@@ -36,10 +36,19 @@ def _init_julia() -> None:
 # Helper – convert guess dict
 # ---------------------------------------------------------------------------
 def _py_to_julia_guess(guess: dict) -> Any:
-    """Convert Python dict ➜ Julia Dict{String,Float64}."""
-    return jl.Dict([(str(k), float(v)) for k, v in guess.items()])
-
-# ---------------------------------------------------------------------------
+    """Handle nested guesses for categorical terms"""
+    jl_dict = jl.Dict()
+    for term, value in guess.items():
+        if isinstance(value, dict):
+            jl_subdict = jl.Dict()
+            for k, v in value.items():
+                jl_subdict[str(k)] = float(v)
+            jl_dict[term] = jl_subdict
+        elif isinstance(value, (list, np.ndarray)):
+            jl_dict[term] = jl.convert(jl.Vector[jl.Float64], [float(x) for x in value])
+        else:
+            jl_dict[term] = float(value)
+    return jl_dict  # Remove invalid characters after this line---------------------------------------------------------
 # Model Wrapper
 # ---------------------------------------------------------------------------
 class GIVModel:
