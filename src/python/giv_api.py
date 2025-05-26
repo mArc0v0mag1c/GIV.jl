@@ -48,7 +48,9 @@ def _py_to_julia_guess(guess: dict) -> Any:
             jl_dict[term] = jl.convert(jl.Vector[jl.Float64], [float(x) for x in value])
         else:
             jl_dict[term] = float(value)
-    return jl_dict  # Remove invalid characters after this line---------------------------------------------------------
+    return jl_dict
+
+# ---------------------------------------------------------------------------
 # Model Wrapper
 # ---------------------------------------------------------------------------
 class GIVModel:
