@@ -1,4 +1,4 @@
-# python3 -m pytest -p no:faulthandler test/python/benchmark_performance.py -v
+# python3 -m pytest -p no:faulthandler test/python/test_benchmark_performance.py -v
 
 import pytest
 import numpy as np

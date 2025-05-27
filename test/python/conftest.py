@@ -3,6 +3,8 @@ from src.python.giv_api import _init_julia
 import pandas as pd
 import os
 
+# python3 -m pytest -v
+
 @pytest.fixture(scope="session", autouse=True)
 def init_julia_once():
     """
