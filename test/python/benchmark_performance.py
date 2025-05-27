@@ -1,13 +1,12 @@
-# benchmark_performance.py
+# python3 -m pytest -p no:faulthandler test/python/benchmark_performance.py -v
+
 import pytest
 import numpy as np
 import pandas as pd
 import time
-from giv_api import giv, GIVModel
+from src.python.giv_api import giv
 from simulation import SimModel
 
-# export PYTHONPATH="${PYTHONPATH}:$(pwd)/src/python"
-# python -m pytest test/python/benchmark_performance.py -v
 
 def preprocess_dataframe(df, formula, id_col, t_col, weight_col, quiet=False):
     """Python version of Julia's preprocess_dataframe"""

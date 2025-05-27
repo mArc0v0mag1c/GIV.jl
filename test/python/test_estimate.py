@@ -1,18 +1,8 @@
+# python3 -m pytest -p no:faulthandler test/python/test_estimate.py -v
+
 import pytest
 import numpy as np
-import pandas as pd
-import os
-from giv_api import giv, GIVModel
-
-# export PYTHONPATH="${PYTHONPATH}:$(pwd)/src/python"
-# python -m pytest test/python/test_estimate.py -v
-
-@pytest.fixture(scope="module")
-def simdata():
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    csv_path = os.path.join(dir_path, "../../examples/simdata1.csv")
-    return pd.read_csv(csv_path)
-
+from src.python.giv_api import giv
 
 def assert_allclose(actual, expected, atol=1e-4):
     np.testing.assert_allclose(actual, expected, atol=atol)
